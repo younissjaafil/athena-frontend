@@ -13,7 +13,7 @@ function TestConnection() {
 
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_BASE_API_URL}/test`
+        `${process.env.REACT_APP_BASE_API_URL}/test/users`
       );
 
       if (!response.ok) {
@@ -56,39 +56,21 @@ function TestConnection() {
               <strong>Timestamp:</strong>{" "}
               {new Date(data.timestamp).toLocaleString()}
             </p>
-            <p className="version">
-              <strong>Version:</strong> {data.version}
+            <p className="count">
+              <strong>Total Count:</strong> {data.count}
             </p>
           </div>
 
-          <div className="stats-section">
-            <h4>📊 Statistics</h4>
-            <div className="stats-grid">
-              <div className="stat-card">
-                <span className="stat-label">Total Users</span>
-                <span className="stat-value">{data.data.stats.totalUsers}</span>
-              </div>
-              <div className="stat-card">
-                <span className="stat-label">Active Connections</span>
-                <span className="stat-value">
-                  {data.data.stats.activeConnections}
-                </span>
-              </div>
-              <div className="stat-card">
-                <span className="stat-label">Uptime</span>
-                <span className="stat-value">{data.data.stats.uptime}</span>
-              </div>
-            </div>
-          </div>
-
           <div className="users-section">
-            <h4>👥 Users ({data.data.users.length})</h4>
+            <h4>👥 Users ({data.data.length})</h4>
             <div className="users-grid">
-              {data.data.users.map((user) => (
+              {data.data.map((user) => (
                 <div key={user.id} className="user-card">
                   <div className="user-id">ID: {user.id}</div>
-                  <div className="user-name">{user.name}</div>
-                  <div className="user-email">{user.email}</div>
+                  <div className="user-name">@{user.username}</div>
+                  <div className="user-created">
+                    Created: {new Date(user.created_at).toLocaleString()}
+                  </div>
                 </div>
               ))}
             </div>
