@@ -4,22 +4,83 @@ import "./Login.css";
 function Login() {
   const [isSignIn, setIsSignIn] = useState(true);
   const [formData, setFormData] = useState({
-    email: "",
+    user_id: "",
     password: "",
   });
   const [focusedInput, setFocusedInput] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   const handleInputChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+    // Clear error when user starts typing
+    if (error) setError(null);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
+    setLoading(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_API_URL}/auth/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_id: formData.user_id,
+            password: formData.password,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || `HTTP error! status: ${response.status}`
+        );
+      }
+
+      // Success - handle the response
+      console.log("Login successful:", data);
+      setSuccessMessage(`Welcome ${data.user?.username || "back"}!`);
+
+      // Store user data and token if provided
+      if (data.token) {
+        localStorage.setItem("authToken", data.token);
+      }
+      if (data.user) {
+        localStorage.setItem("userData", JSON.stringify(data.user));
+      }
+
+      // Redirect based on user role
+      setTimeout(() => {
+        const role = data.user?.role?.toLowerCase();
+        if (role === "student") {
+          window.location.href = "/normal-user";
+        } else if (role === "teacher" || role === "admin") {
+          window.location.href = "/creator";
+        } else {
+          // Default redirect
+          window.location.href = "/dashboard";
+        }
+      }, 1500);
+    } catch (err) {
+      console.error("Login error:", err);
+      setError(err.message || "Login failed. Please check your credentials.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -123,21 +184,57 @@ function Login() {
                 : "Create your Athena AI account"}
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="error-message">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="error-icon"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* Success Message */}
+            {successMessage && (
+              <div className="success-message">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="success-icon"
+                >
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+                <span>{successMessage}</span>
+              </div>
+            )}
+
             {/* Login Form */}
             <form onSubmit={handleSubmit} className="auth-form">
               <div className="form-group">
-                <label htmlFor="email">Email</label>
+                <label htmlFor="user_id">User ID</label>
                 <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
+                  type="text"
+                  id="user_id"
+                  name="user_id"
+                  value={formData.user_id}
                   onChange={handleInputChange}
-                  onFocus={() => setFocusedInput("email")}
+                  onFocus={() => setFocusedInput("user_id")}
                   onBlur={() => setFocusedInput("")}
-                  placeholder="ani@gmail.com"
+                  placeholder="S001, T001, or A001"
                   required
-                  className={focusedInput === "email" ? "focused" : ""}
+                  className={focusedInput === "user_id" ? "focused" : ""}
+                  disabled={loading}
                 />
               </div>
 
@@ -155,6 +252,7 @@ function Login() {
                     placeholder="••••••••••••"
                     required
                     className={focusedInput === "password" ? "focused" : ""}
+                    disabled={loading}
                   />
                   <button
                     type="button"
@@ -199,8 +297,26 @@ function Login() {
                 </div>
               )}
 
-              <button type="submit" className="login-button">
-                {isSignIn ? "Login" : "Create Account"}
+              <button type="submit" className="login-button" disabled={loading}>
+                {loading ? (
+                  <>
+                    <svg
+                      className="spinner"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                      <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+                    </svg>
+                    <span>Logging in...</span>
+                  </>
+                ) : isSignIn ? (
+                  "Login"
+                ) : (
+                  "Create Account"
+                )}
               </button>
 
               <div className="signup-prompt">
