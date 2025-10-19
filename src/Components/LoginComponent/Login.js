@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Login.css";
 
 function Login() {
+  const navigate = useNavigate();
   const [isSignIn, setIsSignIn] = useState(true);
   const [formData, setFormData] = useState({
     user_id: "",
@@ -52,29 +54,58 @@ function Login() {
       }
 
       // Success - handle the response
-      console.log("Login successful:", data);
-      setSuccessMessage(`Welcome ${data.user?.username || "back"}!`);
+      console.log(
+        "Login successful - FULL DATA:",
+        JSON.stringify(data, null, 2)
+      );
+      console.log("data.user:", data.user);
+      console.log("data.data:", data.data);
+      console.log("All data keys:", Object.keys(data));
+
+      // Handle different response structures
+      const userObject = data.user || data.data || data;
+      console.log("User object extracted:", userObject);
 
       // Store user data and token if provided
       if (data.token) {
         localStorage.setItem("authToken", data.token);
       }
-      if (data.user) {
-        localStorage.setItem("userData", JSON.stringify(data.user));
+
+      // Store the user object
+      if (userObject && userObject.user_id) {
+        localStorage.setItem("userData", JSON.stringify(userObject));
       }
 
-      // Redirect based on user role
-      setTimeout(() => {
-        const role = data.user?.role?.toLowerCase();
-        if (role === "student") {
-          window.location.href = "/normal-user";
-        } else if (role === "teacher" || role === "admin") {
-          window.location.href = "/creator";
-        } else {
-          // Default redirect
-          window.location.href = "/dashboard";
-        }
-      }, 1500);
+      // Get role - handle both lowercase and capitalized versions
+      const role = (userObject?.role || userObject?.user_role || "")
+        .toString()
+        .toLowerCase();
+
+      console.log("Final role detected:", role);
+
+      // Determine redirect path
+      let redirectPath = "/student"; // default
+
+      if (role === "student") {
+        redirectPath = "/student";
+        console.log("✅ Redirecting to STUDENT dashboard...");
+      } else if (role === "teacher") {
+        redirectPath = "/creator";
+        console.log("✅ Redirecting to CREATOR studio...");
+      } else if (role === "admin") {
+        redirectPath = "/configuration";
+        console.log("✅ Redirecting to CONFIGURATION page...");
+      } else {
+        console.log("⚠️ Role '" + role + "' not recognized, using default");
+      }
+
+      // Show success message and redirect
+      const username = userObject?.user_id || userObject?.username || "back";
+      setSuccessMessage(`Welcome ${username}!`);
+
+      // Immediate redirect
+      console.log("🚀 Navigating to:", redirectPath);
+      navigate(redirectPath, { replace: true });
     } catch (err) {
       console.error("Login error:", err);
       setError(err.message || "Login failed. Please check your credentials.");
