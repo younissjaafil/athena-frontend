@@ -83,20 +83,29 @@ function Login() {
 
       console.log("Final role detected:", role);
 
-      // Determine redirect path
+      // Also check user_id prefix as fallback
+      const userId = (userObject?.user_id || formData.user_id || "").toString();
+      const userIdPrefix = userId.charAt(0).toUpperCase();
+
+      console.log("User ID:", userId, "Prefix:", userIdPrefix);
+
+      // Determine redirect path with fallback to user_id prefix
       let redirectPath = "/student"; // default
 
-      if (role === "student") {
+      // Check role first, then fallback to user_id prefix
+      if (role === "student" || userIdPrefix === "S") {
         redirectPath = "/student";
         console.log("✅ Redirecting to STUDENT dashboard...");
-      } else if (role === "teacher") {
+      } else if (role === "teacher" || userIdPrefix === "T") {
         redirectPath = "/creator";
         console.log("✅ Redirecting to CREATOR studio...");
-      } else if (role === "admin") {
+      } else if (role === "admin" || userIdPrefix === "A") {
         redirectPath = "/configuration";
         console.log("✅ Redirecting to CONFIGURATION page...");
       } else {
-        console.log("⚠️ Role '" + role + "' not recognized, using default");
+        console.log(
+          "⚠️ Role '" + role + "' not recognized, defaulting to student"
+        );
       }
 
       // Show success message and redirect
