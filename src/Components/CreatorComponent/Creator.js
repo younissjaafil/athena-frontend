@@ -94,7 +94,9 @@ function Creator() {
             <div className="user-info">
               {userData && (
                 <>
-                  <span className="user-name">{userData.username}</span>
+                  <span className="user-name">
+                    {userData.name || userData.username}
+                  </span>
                   <span className="user-role">{userData.role}</span>
                 </>
               )}
@@ -122,7 +124,9 @@ function Creator() {
           <div className="user-info">
             {userData && (
               <>
-                <span className="user-name">{userData.username}</span>
+                <span className="user-name">
+                  {userData.name || userData.username}
+                </span>
                 <span className="user-role">{userData.role}</span>
               </>
             )}
