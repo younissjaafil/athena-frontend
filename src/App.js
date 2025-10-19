@@ -1,11 +1,10 @@
 import "./App.css";
-import TestConnection from "./Components/TestConnectionComponent/TestConnection";
+import Login from "./Components/LoginComponent/Login";
 
 function App() {
   return (
     <div className="App">
-      <h1>Welcome to Athena Ai</h1>
-      <TestConnection />
+      <Login />
     </div>
   );
 }
