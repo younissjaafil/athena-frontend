@@ -5,6 +5,7 @@ function AgentForm({ existingAgent, onSuccess, onCancel, creatorId }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+  const [voiceLoading, setVoiceLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     agent_type: "instructor",
@@ -18,7 +19,30 @@ function AgentForm({ existingAgent, onSuccess, onCancel, creatorId }) {
     },
   });
 
+  const [selectedVoice, setSelectedVoice] = useState("");
+  const [voiceSaved, setVoiceSaved] = useState(false);
   const [courseInput, setCourseInput] = useState("");
+
+  // Voice options with display names
+  const voiceOptions = [
+    { id: "English_Graceful_Lady", name: "English Graceful Lady" },
+    { id: "English_Insightful_Speaker", name: "English Insightful Speaker" },
+    { id: "English_radiant_girl", name: "English Radiant Girl" },
+    { id: "English_Persuasive_Man", name: "English Persuasive Man" },
+    {
+      id: "moss_audio_6dc281eb-713c-11f0-a447-9613c873494c",
+      name: "Moss Audio 1",
+    },
+    {
+      id: "moss_audio_570551b1-735c-11f0-b236-0adeeecad052",
+      name: "Moss Audio 2",
+    },
+    {
+      id: "moss_audio_ad5baf92-735f-11f0-8263-fe5a2fe98ec8",
+      name: "Moss Audio 3",
+    },
+    { id: "English_Lucky_Robot", name: "English Lucky Robot" },
+  ];
 
   // Populate form if editing existing agent
   useEffect(() => {
@@ -71,6 +95,59 @@ function AgentForm({ existingAgent, onSuccess, onCancel, creatorId }) {
       ...prev,
       courses: prev.courses.filter((course) => course !== courseToRemove),
     }));
+  };
+
+  const handleVoiceChange = (e) => {
+    setSelectedVoice(e.target.value);
+    setVoiceSaved(false);
+  };
+
+  const handleSaveVoice = async () => {
+    if (!selectedVoice) {
+      setError("Please select a voice first");
+      return;
+    }
+
+    setVoiceLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/clone_builtin`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_id: creatorId,
+            voice_id: selectedVoice,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
+      }
+
+      const result = await response.json();
+      setVoiceSaved(true);
+      setSuccessMessage("Voice saved successfully!");
+
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
+
+      console.log("Voice saved:", result.data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setVoiceLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -250,6 +327,42 @@ function AgentForm({ existingAgent, onSuccess, onCancel, creatorId }) {
                 </button>
               </span>
             ))}
+          </div>
+        </div>
+
+        {/* Voice Selection */}
+        <div className="form-group">
+          <label htmlFor="voice">Voice Selection</label>
+          <div className="voice-selection-group">
+            <select
+              id="voice"
+              name="voice"
+              value={selectedVoice}
+              onChange={handleVoiceChange}
+              disabled={loading || voiceLoading}
+              className="voice-select"
+            >
+              <option value="">Select a voice</option>
+              {voiceOptions.map((voice) => (
+                <option key={voice.id} value={voice.id}>
+                  {voice.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={handleSaveVoice}
+              className="save-voice-btn"
+              disabled={loading || voiceLoading || !selectedVoice || voiceSaved}
+            >
+              {voiceLoading ? (
+                <span className="loading-spinner">⏳</span>
+              ) : voiceSaved ? (
+                "✅ Saved"
+              ) : (
+                "Save Voice"
+              )}
+            </button>
           </div>
         </div>
 

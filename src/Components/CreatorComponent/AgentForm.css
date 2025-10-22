@@ -131,6 +131,12 @@
   transition: all 0.3s ease;
 }
 
+.form-group select option {
+  background: #1a1a3e;
+  color: #ffffff;
+  padding: 0.5rem;
+}
+
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
@@ -176,6 +182,40 @@
 }
 
 .add-course-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Voice Selection Styles */
+.voice-selection-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.voice-select {
+  flex: 1;
+}
+
+.save-voice-btn {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #61dafb 0%, #00d4ff 100%);
+  border: none;
+  border-radius: 8px;
+  color: #0f0f23;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  min-width: 120px;
+}
+
+.save-voice-btn:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(97, 218, 251, 0.4);
+}
+
+.save-voice-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -306,6 +346,14 @@
   }
 
   .add-course-btn {
+    width: 100%;
+  }
+
+  .voice-selection-group {
+    flex-direction: column;
+  }
+
+  .save-voice-btn {
     width: 100%;
   }
 }
