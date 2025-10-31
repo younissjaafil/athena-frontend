@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import "./AgentList.css";
 
 function AgentList({ creatorId, onEdit, onCreateNew }) {
+  const navigate = useNavigate();
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -12,17 +14,25 @@ function AgentList({ creatorId, onEdit, onCreateNew }) {
     setError(null);
 
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents?creator_id=${creatorId}`
-      );
+      console.log("Fetching agents for user_id:", creatorId);
+      const url = `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents?user_id=${creatorId}`;
+      console.log("API URL:", url);
+
+      const response = await fetch(url);
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        console.error("API Error Response:", errorData);
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
       }
 
       const result = await response.json();
+      console.log("Agents fetched successfully:", result);
       setAgents(result.data || []);
     } catch (err) {
+      console.error("Fetch agents error:", err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -42,7 +52,7 @@ function AgentList({ creatorId, onEdit, onCreateNew }) {
     setDeleteLoading(agentId);
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents/${agentId}?creator_id=${creatorId}`,
+        `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents/${agentId}?user_id=${creatorId}`,
         {
           method: "DELETE",
         }
@@ -158,6 +168,14 @@ function AgentList({ creatorId, onEdit, onCreateNew }) {
                 </span>
               </div>
               <div className="agent-actions">
+                <button
+                  onClick={() => navigate(`/train?agentId=${agent.id}`)}
+                  className="train-btn"
+                  disabled={deleteLoading === agent.id}
+                  title="Train Agent"
+                >
+                  📚
+                </button>
                 <button
                   onClick={() => onEdit(agent)}
                   className="edit-btn"

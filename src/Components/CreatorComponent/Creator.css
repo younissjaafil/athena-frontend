@@ -53,6 +53,23 @@
   color: #61dafb;
 }
 
+.train-btn {
+  padding: 0.5rem 1.5rem;
+  background: linear-gradient(135deg, #61dafb 0%, #00d4ff 100%);
+  border: none;
+  border-radius: 8px;
+  color: #0f0f23;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+}
+
+.train-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(97, 218, 251, 0.4);
+}
+
 .logout-btn {
   padding: 0.5rem 1.5rem;
   background: rgba(255, 255, 255, 0.1);

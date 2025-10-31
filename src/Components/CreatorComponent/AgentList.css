@@ -121,6 +121,7 @@
   gap: 0.5rem;
 }
 
+.train-btn,
 .edit-btn,
 .delete-btn {
   width: 36px;
@@ -133,6 +134,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.train-btn {
+  background: rgba(147, 51, 234, 0.1);
+  border: 1px solid rgba(147, 51, 234, 0.3);
+}
+
+.train-btn:hover:not(:disabled) {
+  background: rgba(147, 51, 234, 0.2);
+  border-color: #9333ea;
+  transform: scale(1.1);
 }
 
 .edit-btn {
@@ -157,6 +169,7 @@
   transform: scale(1.1);
 }
 
+.train-btn:disabled,
 .edit-btn:disabled,
 .delete-btn:disabled {
   opacity: 0.5;

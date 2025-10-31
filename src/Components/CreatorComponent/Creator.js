@@ -29,23 +29,28 @@ function Creator() {
   const checkUserAgents = async (userId) => {
     setCheckingAgents(true);
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents?creator_id=${userId}`
-      );
+      console.log("Checking agents for user_id:", userId);
+      const url = `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents?user_id=${userId}`;
+      console.log("API URL:", url);
+
+      const response = await fetch(url);
 
       if (response.ok) {
         const result = await response.json();
+        console.log("Agents check result:", result);
         setAgents(result.data || []);
-        // If user has agents, show list. Otherwise, show create form
-        setView(result.data && result.data.length > 0 ? "list" : "create");
+        // Always show list view first (AgentList handles empty state)
+        setView("list");
       } else {
-        // Default to create view if API fails
-        setView("create");
+        const errorData = await response.json().catch(() => ({}));
+        console.error("API Error:", errorData);
+        // Default to list view if API fails
+        setView("list");
       }
     } catch (err) {
       console.error("Failed to check agents:", err);
-      // Default to create view if API fails
-      setView("create");
+      // Default to list view if API fails
+      setView("list");
     } finally {
       setCheckingAgents(false);
     }
