@@ -5,6 +5,7 @@ import Configuration from "./Components/ConfigurationComponent/Configuration";
 import Creator from "./Components/CreatorComponent/Creator";
 import StudentDashboard from "./Components/StudentDashboardComponent/StudentDashboard";
 import TrainAgent from "./Components/TrainAgentComponent/TrainAgent";
+import UserChat from "./Components/UserChatComponent/UserChat";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path="/configuration" element={<Configuration />} />
           <Route path="/creator" element={<Creator />} />
           <Route path="/train" element={<TrainAgent />} />
+          <Route path="/chat" element={<UserChat />} />
         </Routes>
       </div>
     </Router>

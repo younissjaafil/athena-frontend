@@ -5,22 +5,70 @@ import "./StudentDashboard.css";
 function StudentDashboard() {
   const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
+  const [agents, setAgents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const API_BASE_URL = "https://agent-chat-alpha.vercel.app";
 
   useEffect(() => {
     // Get user data from localStorage
     const storedUserData = localStorage.getItem("userData");
     if (storedUserData) {
       setUserData(JSON.parse(storedUserData));
+      // Fetch available agents
+      fetchAgents();
     } else {
       // If no user data, redirect to login
       navigate("/");
     }
   }, [navigate]);
 
+  const fetchAgents = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/agents`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log("API Response:", result);
+
+      // API returns agents in result.data.agents array
+      if (result.success && result.data && Array.isArray(result.data.agents)) {
+        console.log(
+          "Setting agents from result.data.agents:",
+          result.data.agents
+        );
+        setAgents(result.data.agents);
+      } else if (result.success && Array.isArray(result.data)) {
+        console.log("Setting agents from result.data:", result.data);
+        setAgents(result.data);
+      } else if (Array.isArray(result)) {
+        // Fallback: in case the API returns array directly
+        console.log("Setting agents from result array:", result);
+        setAgents(result);
+      } else {
+        console.log("No agents found, setting empty array");
+        setAgents([]);
+      }
+    } catch (err) {
+      console.error("Error fetching agents:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("userData");
     navigate("/");
+  };
+
+  const handleChatWithAgent = (agentId) => {
+    navigate(`/chat?agentId=${agentId}`);
   };
 
   return (
@@ -46,80 +94,99 @@ function StudentDashboard() {
         <div className="welcome-section">
           <h2>Welcome Back, {userData?.username || "Student"}!</h2>
           <p className="welcome-description">
-            Continue your learning journey with Athena AI
+            Chat with AI assistants created by your instructors
           </p>
         </div>
 
-        <div className="dashboard-grid">
-          <div className="dashboard-card">
-            <div className="card-icon">📚</div>
-            <h3>My Courses</h3>
-            <p>Access your enrolled courses and learning materials</p>
-            <button className="card-action-btn">View Courses</button>
-          </div>
+        {/* Agents Section */}
+        <div className="agents-section">
+          <h3 className="section-title">
+            <span className="icon">🤖</span> Available AI Assistants
+          </h3>
 
-          <div className="dashboard-card">
-            <div className="card-icon">📝</div>
-            <h3>Assignments</h3>
-            <p>Check and submit your pending assignments</p>
-            <button className="card-action-btn">View Assignments</button>
-          </div>
+          {loading ? (
+            <div className="loading-state">
+              <div className="spinner-large">⏳</div>
+              <p>Loading AI assistants...</p>
+            </div>
+          ) : error ? (
+            <div className="error-state">
+              <div className="error-icon">⚠️</div>
+              <p>Failed to load agents: {error}</p>
+              <button onClick={fetchAgents} className="retry-btn">
+                Retry
+              </button>
+            </div>
+          ) : agents.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">🤷</div>
+              <p>No AI assistants available yet</p>
+              <small>Check back later for new assistants!</small>
+            </div>
+          ) : (
+            <div className="agents-grid">
+              {agents.map((agent) => (
+                <div key={agent.id} className="agent-card">
+                  <div className="agent-card-header">
+                    <div className="agent-icon">🤖</div>
+                    <div className="agent-badge">GPT-4</div>
+                  </div>
 
-          <div className="dashboard-card">
-            <div className="card-icon">🎯</div>
-            <h3>Quizzes</h3>
-            <p>Take quizzes and test your knowledge</p>
-            <button className="card-action-btn">Start Quiz</button>
-          </div>
+                  <div className="agent-card-body">
+                    <h4 className="agent-name">{agent.name}</h4>
+                    <p className="agent-description">
+                      {agent.description || "AI Assistant ready to help you"}
+                    </p>
 
-          <div className="dashboard-card">
-            <div className="card-icon">📊</div>
-            <h3>My Progress</h3>
-            <p>Track your learning progress and achievements</p>
-            <button className="card-action-btn">View Progress</button>
-          </div>
+                    <div className="agent-metadata">
+                      <div className="metadata-item">
+                        <span className="metadata-label">Agent ID:</span>
+                        <span className="metadata-value">{agent.agentId}</span>
+                      </div>
+                      <div className="metadata-item">
+                        <span className="metadata-label">Temperature:</span>
+                        <span className="metadata-value">
+                          {agent.temperature}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-          <div className="dashboard-card">
-            <div className="card-icon">🤖</div>
-            <h3>AI Tutor</h3>
-            <p>Get personalized help from your AI assistant</p>
-            <button className="card-action-btn">Chat Now</button>
-          </div>
-
-          <div className="dashboard-card">
-            <div className="card-icon">🏆</div>
-            <h3>Achievements</h3>
-            <p>View your badges and accomplishments</p>
-            <button className="card-action-btn">View Badges</button>
-          </div>
+                  <div className="agent-card-footer">
+                    <button
+                      onClick={() => handleChatWithAgent(agent.agentId)}
+                      className="chat-with-agent-btn"
+                    >
+                      💬 Chat with me
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        <div className="upcoming-section">
-          <h3>Upcoming Deadlines</h3>
-          <div className="deadline-list">
-            <div className="deadline-item urgent">
-              <div className="deadline-icon">⚠️</div>
-              <div className="deadline-details">
-                <p className="deadline-title">Math Assignment #5</p>
-                <p className="deadline-time">Due in 2 hours</p>
-              </div>
-              <button className="deadline-btn">Start</button>
+        {/* Quick Stats Section */}
+        <div className="quick-stats">
+          <div className="stat-card">
+            <div className="stat-icon">🤖</div>
+            <div className="stat-content">
+              <h4>{agents.length}</h4>
+              <p>Available Assistants</p>
             </div>
-            <div className="deadline-item">
-              <div className="deadline-icon">📝</div>
-              <div className="deadline-details">
-                <p className="deadline-title">Science Quiz - Chapter 3</p>
-                <p className="deadline-time">Due tomorrow</p>
-              </div>
-              <button className="deadline-btn">Start</button>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon">💬</div>
+            <div className="stat-content">
+              <h4>24/7</h4>
+              <p>Always Online</p>
             </div>
-            <div className="deadline-item">
-              <div className="deadline-icon">📖</div>
-              <div className="deadline-details">
-                <p className="deadline-title">History Essay</p>
-                <p className="deadline-time">Due in 3 days</p>
-              </div>
-              <button className="deadline-btn">View</button>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon">⚡</div>
+            <div className="stat-content">
+              <h4>Instant</h4>
+              <p>Response Time</p>
             </div>
           </div>
         </div>
