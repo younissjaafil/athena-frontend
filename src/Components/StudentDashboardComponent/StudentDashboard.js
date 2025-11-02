@@ -8,14 +8,27 @@ function StudentDashboard() {
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [paidAgents, setPaidAgents] = useState([]);
 
   const API_BASE_URL = "https://agent-chat-alpha.vercel.app";
+
+  // Premium agents that require payment
+  const PREMIUM_AGENTS = {
+    1: { price: 5, name: "Computer Science Assistant" },
+  };
 
   useEffect(() => {
     // Get user data from localStorage
     const storedUserData = localStorage.getItem("userData");
     if (storedUserData) {
       setUserData(JSON.parse(storedUserData));
+
+      // Load paid agents from localStorage
+      const storedPaidAgents = localStorage.getItem("paidAgents");
+      if (storedPaidAgents) {
+        setPaidAgents(JSON.parse(storedPaidAgents));
+      }
+
       // Fetch available agents
       fetchAgents();
     } else {
@@ -69,6 +82,27 @@ function StudentDashboard() {
 
   const handleChatWithAgent = (agentId) => {
     navigate(`/chat?agentId=${agentId}`);
+  };
+
+  const handlePayForAgent = (agentId, agentName, price) => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `Unlock ${agentName} for $${price}?\n\n(Payment integration will be added later)`
+    );
+
+    if (confirmed) {
+      // Add agent to paid list
+      const updatedPaidAgents = [...paidAgents, agentId];
+      setPaidAgents(updatedPaidAgents);
+      localStorage.setItem("paidAgents", JSON.stringify(updatedPaidAgents));
+
+      // Show success message
+      alert(`✅ Success! You now have access to ${agentName}`);
+    }
+  };
+
+  const isAgentLocked = (agentId) => {
+    return PREMIUM_AGENTS[agentId] && !paidAgents.includes(agentId);
   };
 
   return (
@@ -125,43 +159,71 @@ function StudentDashboard() {
             </div>
           ) : (
             <div className="agents-grid">
-              {agents.map((agent) => (
-                <div key={agent.id} className="agent-card">
-                  <div className="agent-card-header">
-                    <div className="agent-icon">🤖</div>
-                    <div className="agent-badge">GPT-4</div>
-                  </div>
+              {agents.map((agent) => {
+                const locked = isAgentLocked(agent.agentId);
+                const premiumInfo = PREMIUM_AGENTS[agent.agentId];
 
-                  <div className="agent-card-body">
-                    <h4 className="agent-name">{agent.name}</h4>
-                    <p className="agent-description">
-                      {agent.description || "AI Assistant ready to help you"}
-                    </p>
+                return (
+                  <div
+                    key={agent.id}
+                    className={`agent-card ${locked ? "locked-agent" : ""}`}
+                  >
+                    <div className="agent-card-header">
+                      <div className="agent-icon">{locked ? "🔒" : "🤖"}</div>
+                      <div className="agent-badge">GPT-4</div>
+                      {locked && (
+                        <div className="premium-badge">💎 Premium</div>
+                      )}
+                    </div>
 
-                    <div className="agent-metadata">
-                      <div className="metadata-item">
-                        <span className="metadata-label">Agent ID:</span>
-                        <span className="metadata-value">{agent.agentId}</span>
-                      </div>
-                      <div className="metadata-item">
-                        <span className="metadata-label">Temperature:</span>
-                        <span className="metadata-value">
-                          {agent.temperature}
-                        </span>
+                    <div className="agent-card-body">
+                      <h4 className="agent-name">{agent.name}</h4>
+                      <p className="agent-description">
+                        {agent.description || "AI Assistant ready to help you"}
+                      </p>
+
+                      <div className="agent-metadata">
+                        <div className="metadata-item">
+                          <span className="metadata-label">Agent ID:</span>
+                          <span className="metadata-value">
+                            {agent.agentId}
+                          </span>
+                        </div>
+                        <div className="metadata-item">
+                          <span className="metadata-label">Temperature:</span>
+                          <span className="metadata-value">
+                            {agent.temperature}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="agent-card-footer">
-                    <button
-                      onClick={() => handleChatWithAgent(agent.agentId)}
-                      className="chat-with-agent-btn"
-                    >
-                      💬 Chat with me
-                    </button>
+                    <div className="agent-card-footer">
+                      {locked ? (
+                        <button
+                          onClick={() =>
+                            handlePayForAgent(
+                              agent.agentId,
+                              agent.name,
+                              premiumInfo.price
+                            )
+                          }
+                          className="pay-btn"
+                        >
+                          💳 Unlock for ${premiumInfo.price}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleChatWithAgent(agent.agentId)}
+                          className="chat-with-agent-btn"
+                        >
+                          💬 Chat with me
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

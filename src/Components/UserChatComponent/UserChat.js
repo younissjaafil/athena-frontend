@@ -20,6 +20,11 @@ function UserChat() {
 
   const API_BASE_URL = "https://agent-chat-alpha.vercel.app";
 
+  // Premium agents that require payment
+  const PREMIUM_AGENTS = {
+    1: { price: 5, name: "Computer Science Assistant" },
+  };
+
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -42,6 +47,15 @@ function UserChat() {
 
     if (!agentId) {
       setError("No agent selected");
+      return;
+    }
+
+    // Check if agent is premium and not paid
+    const paidAgents = JSON.parse(localStorage.getItem("paidAgents") || "[]");
+    if (PREMIUM_AGENTS[agentId] && !paidAgents.includes(agentId)) {
+      setError(
+        `This is a premium assistant. Please unlock it for $${PREMIUM_AGENTS[agentId].price} from the dashboard.`
+      );
       return;
     }
 
@@ -104,7 +118,8 @@ function UserChat() {
 
     fetchAgentDetails();
     fetchChatHistory(user.user_id, agentId);
-  }, [navigate, agentId, API_BASE_URL]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate, agentId]);
 
   const sendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
