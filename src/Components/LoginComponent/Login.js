@@ -3,39 +3,17 @@ import { useNavigate } from "react-router-dom";
 import "./Login.css";
 
 /**
- * Login Component - Athena AI Authentication
+ * Login/Register Component - Athena AI Authentication
  *
- * API Integration: POST /auth/login
- * Base URL: REACT_APP_BASE_API_URL (http://localhost:2000 or production URL)
+ * LOGIN API Integration: POST /auth/login
+ * Request Body: { user_id: string, password: string }
+ * Response: { success: true, message: string, data: {...userObject} }
  *
- * Request Body:
- * {
- *   user_id: string,    // User ID (e.g., INST001, STU001, ADMIN001)
- *   password: string    // User password
- * }
+ * REGISTRATION API Integration: POST /auth/register
+ * Request Body: { user_id: string, name: string, email: string, password: string, role: string, campus: string }
+ * Response: { success: true, message: string, data: {...userObject} }
  *
- * Response Format (on success):
- * {
- *   success: true,
- *   message: "Login successful",
- *   data: {
- *     id: number,
- *     user_id: string,
- *     name: string,
- *     email: string,
- *     role: "student" | "instructor" | "admin",
- *     campus: string,
- *     created_at: string,
- *     updated_at: string
- *   }
- * }
- *
- * Response Format (on error):
- * {
- *   success: false,
- *   message: "Error message",
- *   data: null
- * }
+ * Valid Roles: student, instructor, admin
  *
  * Role-based routing:
  * - student → /student (Student Dashboard)
@@ -49,6 +27,10 @@ function Login() {
   const [formData, setFormData] = useState({
     user_id: "",
     password: "",
+    name: "",
+    email: "",
+    role: "student",
+    campus: "Main Campus",
   });
   const [focusedInput, setFocusedInput] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -65,8 +47,31 @@ function Login() {
     if (error) setError(null);
   };
 
+  const handleTabSwitch = (signIn) => {
+    setIsSignIn(signIn);
+    setError(null);
+    setSuccessMessage(null);
+    // Reset form when switching tabs
+    setFormData({
+      user_id: "",
+      password: "",
+      name: "",
+      email: "",
+      role: "student",
+      campus: "Main Campus",
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSignIn) {
+      await handleLogin();
+    } else {
+      await handleRegister();
+    }
+  };
+
+  const handleLogin = async () => {
     setLoading(true);
     setError(null);
     setSuccessMessage(null);
@@ -135,14 +140,121 @@ function Login() {
       }
 
       // Show success message
-      setSuccessMessage(`Welcome ${userObject.name || userObject.user_id}!`);
+      setSuccessMessage(
+        `Welcome back, ${userObject.name || userObject.user_id}!`
+      );
 
       // Redirect to appropriate page
-      console.log("🚀 Navigating to:", redirectPath);
-      navigate(redirectPath, { replace: true });
+      setTimeout(() => {
+        console.log("🚀 Navigating to:", redirectPath);
+        navigate(redirectPath, { replace: true });
+      }, 1000);
     } catch (err) {
       console.error("Login error:", err);
       setError(err.message || "Login failed. Please check your credentials.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async () => {
+    setLoading(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      // Validate required fields
+      if (
+        !formData.user_id ||
+        !formData.name ||
+        !formData.email ||
+        !formData.password ||
+        !formData.role
+      ) {
+        throw new Error("All fields are required");
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        throw new Error("Please enter a valid email address");
+      }
+
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_API_URL}/auth/register`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_id: formData.user_id,
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
+            role: formData.role,
+            campus: formData.campus || "Main Campus",
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      // Check if registration was successful
+      if (!data.success) {
+        throw new Error(data.message || "Registration failed");
+      }
+
+      // Success - handle the response
+      console.log("Registration successful:", data.message);
+
+      // Extract user data from the response
+      const userObject = data.data;
+
+      if (!userObject || !userObject.user_id) {
+        throw new Error("Invalid response format from server");
+      }
+
+      console.log("New user created:", userObject);
+
+      // Store user data in localStorage
+      localStorage.setItem("userData", JSON.stringify(userObject));
+
+      // Get role from response
+      const role = userObject.role.toLowerCase();
+      console.log("User role:", role);
+
+      // Determine redirect path based on role
+      let redirectPath = "/student"; // default
+
+      if (role === "student") {
+        redirectPath = "/student";
+        console.log("✅ Redirecting to STUDENT dashboard...");
+      } else if (role === "instructor") {
+        redirectPath = "/creator";
+        console.log(
+          "✅ Redirecting to CREATOR studio to create and train agents..."
+        );
+      } else if (role === "admin") {
+        redirectPath = "/configuration";
+        console.log("✅ Redirecting to CONFIGURATION page...");
+      } else {
+        console.warn("Unknown role:", role, "- defaulting to student");
+      }
+
+      // Show success message
+      setSuccessMessage(
+        `Account created successfully! Welcome, ${userObject.name}!`
+      );
+
+      // Redirect to appropriate page after a short delay
+      setTimeout(() => {
+        console.log("🚀 Navigating to:", redirectPath);
+        navigate(redirectPath, { replace: true });
+      }, 1500);
+    } catch (err) {
+      console.error("Registration error:", err);
+      setError(err.message || "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -230,13 +342,13 @@ function Login() {
             <div className="auth-tabs">
               <button
                 className={`tab ${isSignIn ? "active" : ""}`}
-                onClick={() => setIsSignIn(true)}
+                onClick={() => handleTabSwitch(true)}
               >
                 Sign in
               </button>
               <button
                 className={`tab ${!isSignIn ? "active" : ""}`}
-                onClick={() => setIsSignIn(false)}
+                onClick={() => handleTabSwitch(false)}
               >
                 Sign up
               </button>
@@ -284,8 +396,48 @@ function Login() {
               </div>
             )}
 
-            {/* Login Form */}
+            {/* Login/Register Form */}
             <form onSubmit={handleSubmit} className="auth-form">
+              {/* Name field - Only for signup */}
+              {!isSignIn && (
+                <div className="form-group">
+                  <label htmlFor="name">Full Name</label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    onFocus={() => setFocusedInput("name")}
+                    onBlur={() => setFocusedInput("")}
+                    placeholder="Dr. John Smith"
+                    required
+                    className={focusedInput === "name" ? "focused" : ""}
+                    disabled={loading}
+                  />
+                </div>
+              )}
+
+              {/* Email field - Only for signup */}
+              {!isSignIn && (
+                <div className="form-group">
+                  <label htmlFor="email">Email Address</label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    onFocus={() => setFocusedInput("email")}
+                    onBlur={() => setFocusedInput("")}
+                    placeholder="john.smith@university.edu"
+                    required
+                    className={focusedInput === "email" ? "focused" : ""}
+                    disabled={loading}
+                  />
+                </div>
+              )}
+
               <div className="form-group">
                 <label htmlFor="user_id">User ID</label>
                 <input
@@ -296,12 +448,56 @@ function Login() {
                   onChange={handleInputChange}
                   onFocus={() => setFocusedInput("user_id")}
                   onBlur={() => setFocusedInput("")}
-                  placeholder="S001, T001, or A001"
+                  placeholder={
+                    isSignIn
+                      ? "INST001, STU001, or ADMIN001"
+                      : "Choose a unique ID"
+                  }
                   required
                   className={focusedInput === "user_id" ? "focused" : ""}
                   disabled={loading}
                 />
               </div>
+
+              {/* Role selector - Only for signup */}
+              {!isSignIn && (
+                <div className="form-group">
+                  <label htmlFor="role">I am a...</label>
+                  <select
+                    id="role"
+                    name="role"
+                    value={formData.role}
+                    onChange={handleInputChange}
+                    onFocus={() => setFocusedInput("role")}
+                    onBlur={() => setFocusedInput("")}
+                    required
+                    className={focusedInput === "role" ? "focused" : ""}
+                    disabled={loading}
+                  >
+                    <option value="student">Student 📚</option>
+                    <option value="instructor">Instructor / Creator 🤖</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Campus field - Only for signup */}
+              {!isSignIn && (
+                <div className="form-group">
+                  <label htmlFor="campus">Campus</label>
+                  <input
+                    type="text"
+                    id="campus"
+                    name="campus"
+                    value={formData.campus}
+                    onChange={handleInputChange}
+                    onFocus={() => setFocusedInput("campus")}
+                    onBlur={() => setFocusedInput("")}
+                    placeholder="Main Campus"
+                    className={focusedInput === "campus" ? "focused" : ""}
+                    disabled={loading}
+                  />
+                </div>
+              )}
 
               <div className="form-group">
                 <label htmlFor="password">Password</label>
@@ -375,7 +571,9 @@ function Login() {
                       <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
                       <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
                     </svg>
-                    <span>Logging in...</span>
+                    <span>
+                      {isSignIn ? "Logging in..." : "Creating account..."}
+                    </span>
                   </>
                 ) : isSignIn ? (
                   "Login"
@@ -390,7 +588,7 @@ function Login() {
                     Don't have an account?{" "}
                     <button
                       type="button"
-                      onClick={() => setIsSignIn(false)}
+                      onClick={() => handleTabSwitch(false)}
                       className="signup-link"
                     >
                       Sign up
@@ -401,7 +599,7 @@ function Login() {
                     Already have an account?{" "}
                     <button
                       type="button"
-                      onClick={() => setIsSignIn(true)}
+                      onClick={() => handleTabSwitch(true)}
                       className="signup-link"
                     >
                       Sign in
