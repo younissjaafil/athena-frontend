@@ -2,6 +2,47 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Login.css";
 
+/**
+ * Login Component - Athena AI Authentication
+ *
+ * API Integration: POST /auth/login
+ * Base URL: REACT_APP_BASE_API_URL (http://localhost:2000 or production URL)
+ *
+ * Request Body:
+ * {
+ *   user_id: string,    // User ID (e.g., INST001, STU001, ADMIN001)
+ *   password: string    // User password
+ * }
+ *
+ * Response Format (on success):
+ * {
+ *   success: true,
+ *   message: "Login successful",
+ *   data: {
+ *     id: number,
+ *     user_id: string,
+ *     name: string,
+ *     email: string,
+ *     role: "student" | "instructor" | "admin",
+ *     campus: string,
+ *     created_at: string,
+ *     updated_at: string
+ *   }
+ * }
+ *
+ * Response Format (on error):
+ * {
+ *   success: false,
+ *   message: "Error message",
+ *   data: null
+ * }
+ *
+ * Role-based routing:
+ * - student → /student (Student Dashboard)
+ * - instructor → /creator (Creator Studio)
+ * - admin → /configuration (Configuration Page)
+ */
+
 function Login() {
   const navigate = useNavigate();
   const [isSignIn, setIsSignIn] = useState(true);
@@ -47,72 +88,56 @@ function Login() {
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(
-          data.message || `HTTP error! status: ${response.status}`
-        );
+      // Check if login was successful based on API response structure
+      if (!data.success) {
+        throw new Error(data.message || "Login failed");
       }
 
-      // Success - handle the response
-      console.log(
-        "Login successful - FULL DATA:",
-        JSON.stringify(data, null, 2)
-      );
-      console.log("data.user:", data.user);
-      console.log("data.data:", data.data);
-      console.log("All data keys:", Object.keys(data));
+      // Success - handle the response according to API documentation
+      console.log("Login successful:", data.message);
 
-      // Handle different response structures
-      const userObject = data.user || data.data || data;
-      console.log("User object extracted:", userObject);
+      // Extract user data from the response (API returns it in data.data)
+      const userObject = data.data;
 
-      // Store user data and token if provided
-      if (data.token) {
-        localStorage.setItem("authToken", data.token);
+      if (!userObject || !userObject.user_id) {
+        throw new Error("Invalid response format from server");
       }
 
-      // Store the user object
-      if (userObject && userObject.user_id) {
-        localStorage.setItem("userData", JSON.stringify(userObject));
-      }
+      console.log("User data:", userObject);
 
-      // Get role - handle both lowercase and capitalized versions
-      const role = (userObject?.role || userObject?.user_role || "")
-        .toString()
-        .toLowerCase();
+      // Store user data in localStorage
+      localStorage.setItem("userData", JSON.stringify(userObject));
 
-      console.log("Final role detected:", role);
+      // Note: API documentation shows no token in response yet
+      // When JWT is implemented, uncomment:
+      // if (data.token) {
+      //   localStorage.setItem("authToken", data.token);
+      // }
 
-      // Also check user_id prefix as fallback
-      const userId = (userObject?.user_id || formData.user_id || "").toString();
-      const userIdPrefix = userId.charAt(0).toUpperCase();
+      // Get role from response (API returns: student, instructor, or admin)
+      const role = userObject.role.toLowerCase();
+      console.log("User role:", role);
 
-      console.log("User ID:", userId, "Prefix:", userIdPrefix);
-
-      // Determine redirect path with fallback to user_id prefix
+      // Determine redirect path based on role
       let redirectPath = "/student"; // default
 
-      // Check role first, then fallback to user_id prefix
-      if (role === "student" || userIdPrefix === "S") {
+      if (role === "student") {
         redirectPath = "/student";
         console.log("✅ Redirecting to STUDENT dashboard...");
-      } else if (role === "teacher" || userIdPrefix === "T") {
+      } else if (role === "instructor") {
         redirectPath = "/creator";
         console.log("✅ Redirecting to CREATOR studio...");
-      } else if (role === "admin" || userIdPrefix === "A") {
+      } else if (role === "admin") {
         redirectPath = "/configuration";
         console.log("✅ Redirecting to CONFIGURATION page...");
       } else {
-        console.log(
-          "⚠️ Role '" + role + "' not recognized, defaulting to student"
-        );
+        console.warn("Unknown role:", role, "- defaulting to student");
       }
 
-      // Show success message and redirect
-      const username = userObject?.user_id || userObject?.username || "back";
-      setSuccessMessage(`Welcome ${username}!`);
+      // Show success message
+      setSuccessMessage(`Welcome ${userObject.name || userObject.user_id}!`);
 
-      // Immediate redirect
+      // Redirect to appropriate page
       console.log("🚀 Navigating to:", redirectPath);
       navigate(redirectPath, { replace: true });
     } catch (err) {
