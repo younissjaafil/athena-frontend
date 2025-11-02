@@ -21,18 +21,26 @@ function TrainAgent() {
     if (storedUserData) {
       const parsedData = JSON.parse(storedUserData);
       setUserData(parsedData);
-      fetchUserAgents(parsedData.user_id);
+      fetchUserAgents(parsedData.id); // Use instructor_id (integer ID)
     } else {
       // If no user data, redirect to login
       navigate("/");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
-  const fetchUserAgents = async (userId) => {
+  const fetchUserAgents = async (instructorId) => {
     setLoading(true);
     try {
-      console.log("Fetching agents for user_id:", userId);
-      const url = `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents?user_id=${userId}`;
+      console.log("Fetching agents for instructor_id:", instructorId);
+
+      // Use the creator-specific URL if it exists, otherwise use the new unified API
+      const newApiUrl = `${process.env.REACT_APP_BASE_API_URL}/api/creator/agents?instructor_id=${instructorId}`;
+      const oldApiUrl = `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents?instructor_id=${instructorId}`;
+      const url = process.env.REACT_APP_CREATOR_BASE_API_URL
+        ? oldApiUrl
+        : newApiUrl;
+
       console.log("API URL:", url);
 
       const response = await fetch(url);
@@ -46,7 +54,7 @@ function TrainAgent() {
         // Auto-select agent if agentId is in URL
         if (agentIdFromUrl && fetchedAgents.length > 0) {
           const agentToSelect = fetchedAgents.find(
-            (agent) => agent.id === agentIdFromUrl
+            (agent) => agent.id.toString() === agentIdFromUrl.toString()
           );
           if (agentToSelect) {
             console.log("Auto-selecting agent:", agentToSelect);
@@ -115,12 +123,23 @@ function TrainAgent() {
     try {
       const formData = new FormData();
       formData.append("file", selectedFile);
-      formData.append("user_id", selectedAgent.id); // Pass agent ID instead of user ID
 
-      console.log("Training agent with ID:", selectedAgent.id);
+      // Use agent_id (new API parameter) - supports both UUID and integer ID
+      formData.append("agent_id", selectedAgent.agent_id || selectedAgent.id);
+
+      console.log(
+        "Training agent with ID:",
+        selectedAgent.agent_id || selectedAgent.id
+      );
       console.log("Agent details:", selectedAgent);
 
-      const response = await fetch("https://train-agent.vercel.app/train", {
+      // Use environment variable for train API URL, fallback to production URL
+      const trainApiUrl =
+        process.env.REACT_APP_TRAIN_API_URL ||
+        "https://train-agent.vercel.app/train";
+      console.log("Train API URL:", trainApiUrl);
+
+      const response = await fetch(trainApiUrl, {
         method: "POST",
         body: formData,
       });
@@ -129,7 +148,9 @@ function TrainAgent() {
         const errorData = await response.json().catch(() => ({}));
         console.error("Upload error:", errorData);
         throw new Error(
-          errorData.message || `Upload failed! status: ${response.status}`
+          errorData.message ||
+            errorData.error ||
+            `Upload failed! status: ${response.status}`
         );
       }
 
@@ -151,29 +172,15 @@ function TrainAgent() {
     }
   };
 
-  const getAgentTypeIcon = (type) => {
-    switch (type) {
-      case "instructor":
-        return "👨‍🏫";
-      case "it_support":
-        return "🔧";
-      case "administration":
-        return "📋";
+  const getVisibilityLabel = (visibility) => {
+    switch (visibility) {
+      case "public":
+        return "Public";
+      case "campus":
+        return "Campus";
+      case "private":
       default:
-        return "🤖";
-    }
-  };
-
-  const getAgentTypeLabel = (type) => {
-    switch (type) {
-      case "instructor":
-        return "Instructor";
-      case "it_support":
-        return "IT Support";
-      case "administration":
-        return "Administration";
-      default:
-        return type;
+        return "Private";
     }
   };
 
@@ -242,7 +249,9 @@ function TrainAgent() {
           <h2>Train Your AI Agent</h2>
           <p className="welcome-description">
             {selectedAgent
-              ? `Upload documents to train ${selectedAgent.domain}`
+              ? `Upload documents to train ${
+                  selectedAgent.name || selectedAgent.domain || "your agent"
+                }`
               : "Select an agent and upload documents to enhance their knowledge base"}
           </p>
           {agentIdFromUrl && (
@@ -282,14 +291,18 @@ function TrainAgent() {
                       }`}
                       onClick={() => handleAgentSelect(agent)}
                     >
-                      <div className="agent-selection-icon">
-                        {getAgentTypeIcon(agent.agent_type)}
-                      </div>
+                      <div className="agent-selection-icon">🤖</div>
                       <div className="agent-selection-info">
-                        <h4>{agent.domain}</h4>
+                        <h4>{agent.name || agent.domain || "Unnamed Agent"}</h4>
                         <span className="agent-selection-type">
-                          {getAgentTypeLabel(agent.agent_type)}
+                          {getVisibilityLabel(agent.visibility || "private")}
                         </span>
+                        {agent.description && (
+                          <p className="agent-description-preview">
+                            {agent.description.substring(0, 60)}
+                            {agent.description.length > 60 ? "..." : ""}
+                          </p>
+                        )}
                       </div>
                       {selectedAgent?.id === agent.id && (
                         <div className="selected-indicator">✓</div>
