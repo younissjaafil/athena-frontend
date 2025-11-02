@@ -1,62 +1,30 @@
 import { useState, useEffect } from "react";
 import "./AgentForm.css";
 
-function AgentForm({ existingAgent, onSuccess, onCancel, creatorId }) {
+function AgentForm({ existingAgent, onSuccess, onCancel, instructorId }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
-  const [voiceLoading, setVoiceLoading] = useState(false);
 
   const [formData, setFormData] = useState({
-    agent_type: "instructor",
-    domain: "",
-    campus: "",
-    region: "Lebanon",
-    courses: [],
-    personality: {
-      tone: "friendly",
-      formality: "professional",
-    },
+    name: "",
+    description: "",
+    avatar_url: "",
+    model_type: "gpt-5",
+    temperature: 0.7,
+    visibility: "private",
   });
-
-  const [selectedVoice, setSelectedVoice] = useState("");
-  const [voiceSaved, setVoiceSaved] = useState(false);
-  const [courseInput, setCourseInput] = useState("");
-
-  // Voice options with display names
-  const voiceOptions = [
-    { id: "English_Graceful_Lady", name: "English Graceful Lady" },
-    { id: "English_Insightful_Speaker", name: "English Insightful Speaker" },
-    { id: "English_radiant_girl", name: "English Radiant Girl" },
-    { id: "English_Persuasive_Man", name: "English Persuasive Man" },
-    {
-      id: "moss_audio_6dc281eb-713c-11f0-a447-9613c873494c",
-      name: "Moss Audio 1",
-    },
-    {
-      id: "moss_audio_570551b1-735c-11f0-b236-0adeeecad052",
-      name: "Moss Audio 2",
-    },
-    {
-      id: "moss_audio_ad5baf92-735f-11f0-8263-fe5a2fe98ec8",
-      name: "Moss Audio 3",
-    },
-    { id: "English_Lucky_Robot", name: "English Lucky Robot" },
-  ];
 
   // Populate form if editing existing agent
   useEffect(() => {
     if (existingAgent) {
       setFormData({
-        agent_type: existingAgent.agent_type || "instructor",
-        domain: existingAgent.domain || "",
-        campus: existingAgent.campus || "",
-        region: existingAgent.region || "Lebanon",
-        courses: existingAgent.courses || [],
-        personality: existingAgent.personality || {
-          tone: "friendly",
-          formality: "professional",
-        },
+        name: existingAgent.name || "",
+        description: existingAgent.description || "",
+        avatar_url: existingAgent.avatar_url || "",
+        model_type: existingAgent.model_type || "gpt-5",
+        temperature: existingAgent.temperature || 0.7,
+        visibility: existingAgent.visibility || "private",
       });
     }
   }, [existingAgent]);
@@ -69,87 +37,6 @@ function AgentForm({ existingAgent, onSuccess, onCancel, creatorId }) {
     }));
   };
 
-  const handlePersonalityChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      personality: {
-        ...prev.personality,
-        [name]: value,
-      },
-    }));
-  };
-
-  const handleAddCourse = () => {
-    if (courseInput.trim() && !formData.courses.includes(courseInput.trim())) {
-      setFormData((prev) => ({
-        ...prev,
-        courses: [...prev.courses, courseInput.trim()],
-      }));
-      setCourseInput("");
-    }
-  };
-
-  const handleRemoveCourse = (courseToRemove) => {
-    setFormData((prev) => ({
-      ...prev,
-      courses: prev.courses.filter((course) => course !== courseToRemove),
-    }));
-  };
-
-  const handleVoiceChange = (e) => {
-    setSelectedVoice(e.target.value);
-    setVoiceSaved(false);
-  };
-
-  const handleSaveVoice = async () => {
-    if (!selectedVoice) {
-      setError("Please select a voice first");
-      return;
-    }
-
-    setVoiceLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(
-        `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/clone_builtin`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            user_id: creatorId,
-            voice_id: selectedVoice,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || `HTTP error! status: ${response.status}`
-        );
-      }
-
-      const result = await response.json();
-      setVoiceSaved(true);
-      setSuccessMessage("Voice saved successfully!");
-
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setSuccessMessage(null);
-      }, 3000);
-
-      console.log("Voice saved:", result.data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setVoiceLoading(false);
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -158,15 +45,24 @@ function AgentForm({ existingAgent, onSuccess, onCancel, creatorId }) {
 
     try {
       const payload = {
-        creator_id: creatorId,
+        instructor_id: instructorId,
         ...formData,
+        temperature: parseFloat(formData.temperature),
       };
 
-      const url = existingAgent
-        ? `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents/${existingAgent.id}`
-        : `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents`;
+      // Use the creator-specific URL if it exists, otherwise use the new unified API
+      const newApiBaseUrl = `${process.env.REACT_APP_BASE_API_URL}/api/creator/agents`;
+      const oldApiBaseUrl = `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents`;
+      const baseUrl = process.env.REACT_APP_CREATOR_BASE_API_URL
+        ? oldApiBaseUrl
+        : newApiBaseUrl;
+
+      const url = existingAgent ? `${baseUrl}/${existingAgent.id}` : baseUrl;
 
       const method = existingAgent ? "PUT" : "POST";
+
+      console.log("Submitting agent to:", url);
+      console.log("Payload:", payload);
 
       const response = await fetch(url, {
         method,
@@ -177,13 +73,15 @@ function AgentForm({ existingAgent, onSuccess, onCancel, creatorId }) {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
+        console.error("API Error:", errorData);
         throw new Error(
           errorData.message || `HTTP error! status: ${response.status}`
         );
       }
 
       const result = await response.json();
+      console.log("Agent saved successfully:", result);
       setSuccessMessage(
         existingAgent
           ? "Agent updated successfully!"
@@ -195,6 +93,7 @@ function AgentForm({ existingAgent, onSuccess, onCancel, creatorId }) {
         onSuccess(result.data);
       }, 1500);
     } catch (err) {
+      console.error("Submit error:", err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -225,178 +124,108 @@ function AgentForm({ existingAgent, onSuccess, onCancel, creatorId }) {
       )}
 
       <form onSubmit={handleSubmit} className="agent-form">
-        {/* Agent Type */}
+        {/* Agent Name */}
         <div className="form-group">
-          <label htmlFor="agent_type">Agent Type *</label>
-          <select
-            id="agent_type"
-            name="agent_type"
-            value={formData.agent_type}
+          <label htmlFor="name">Agent Name *</label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            value={formData.name}
             onChange={handleInputChange}
+            placeholder="e.g., Dr. Smith's CS101 Assistant"
             required
             disabled={loading}
+          />
+        </div>
+
+        {/* Description */}
+        <div className="form-group">
+          <label htmlFor="description">Description</label>
+          <textarea
+            id="description"
+            name="description"
+            value={formData.description}
+            onChange={handleInputChange}
+            placeholder="Describe your agent's purpose and expertise"
+            rows="4"
+            disabled={loading}
+          />
+        </div>
+
+        {/* Avatar URL */}
+        <div className="form-group">
+          <label htmlFor="avatar_url">Avatar URL (optional)</label>
+          <input
+            type="url"
+            id="avatar_url"
+            name="avatar_url"
+            value={formData.avatar_url}
+            onChange={handleInputChange}
+            placeholder="https://example.com/avatar.png"
+            disabled={loading}
+          />
+        </div>
+
+        {/* Model Type */}
+        <div className="form-group">
+          <label htmlFor="model_type">AI Model</label>
+          <select
+            id="model_type"
+            name="model_type"
+            value={formData.model_type}
+            onChange={handleInputChange}
+            disabled={loading}
           >
-            <option value="instructor">Instructor</option>
-            <option value="it_support">IT Support</option>
-            <option value="administration">Administration</option>
+            <option value="gpt-5">GPT-5</option>
+            <option value="gpt-4">GPT-4</option>
+            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+            <option value="claude-3">Claude 3</option>
           </select>
         </div>
 
-        {/* Domain */}
+        {/* Temperature */}
         <div className="form-group">
-          <label htmlFor="domain">Domain/Subject *</label>
+          <label htmlFor="temperature">
+            Creativity Level (Temperature: {formData.temperature})
+          </label>
           <input
-            type="text"
-            id="domain"
-            name="domain"
-            value={formData.domain}
+            type="range"
+            id="temperature"
+            name="temperature"
+            min="0"
+            max="2"
+            step="0.1"
+            value={formData.temperature}
             onChange={handleInputChange}
-            placeholder="e.g., Computer Science, Mathematics"
-            required
             disabled={loading}
           />
-        </div>
-
-        {/* Campus */}
-        <div className="form-group">
-          <label htmlFor="campus">Campus *</label>
-          <input
-            type="text"
-            id="campus"
-            name="campus"
-            value={formData.campus}
-            onChange={handleInputChange}
-            placeholder="e.g., Main Campus, North Campus"
-            required
-            disabled={loading}
-          />
-        </div>
-
-        {/* Region */}
-        <div className="form-group">
-          <label htmlFor="region">Region</label>
-          <input
-            type="text"
-            id="region"
-            name="region"
-            value={formData.region}
-            onChange={handleInputChange}
-            placeholder="e.g., Lebanon"
-            disabled={loading}
-          />
-        </div>
-
-        {/* Courses */}
-        <div className="form-group">
-          <label htmlFor="courseInput">Courses</label>
-          <div className="course-input-group">
-            <input
-              type="text"
-              id="courseInput"
-              value={courseInput}
-              onChange={(e) => setCourseInput(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleAddCourse();
-                }
-              }}
-              placeholder="e.g., CS101, CS102"
-              disabled={loading}
-            />
-            <button
-              type="button"
-              onClick={handleAddCourse}
-              className="add-course-btn"
-              disabled={loading || !courseInput.trim()}
-            >
-              Add
-            </button>
-          </div>
-          <div className="course-tags">
-            {formData.courses.map((course) => (
-              <span key={course} className="course-tag">
-                {course}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveCourse(course)}
-                  className="remove-course-btn"
-                  disabled={loading}
-                >
-                  ✕
-                </button>
-              </span>
-            ))}
+          <div className="temperature-labels">
+            <span>Focused (0)</span>
+            <span>Balanced (1)</span>
+            <span>Creative (2)</span>
           </div>
         </div>
 
-        {/* Voice Selection */}
+        {/* Visibility */}
         <div className="form-group">
-          <label htmlFor="voice">Voice Selection</label>
-          <div className="voice-selection-group">
-            <select
-              id="voice"
-              name="voice"
-              value={selectedVoice}
-              onChange={handleVoiceChange}
-              disabled={loading || voiceLoading}
-              className="voice-select"
-            >
-              <option value="">Select a voice</option>
-              {voiceOptions.map((voice) => (
-                <option key={voice.id} value={voice.id}>
-                  {voice.name}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={handleSaveVoice}
-              className="save-voice-btn"
-              disabled={loading || voiceLoading || !selectedVoice || voiceSaved}
-            >
-              {voiceLoading ? (
-                <span className="loading-spinner">⏳</span>
-              ) : voiceSaved ? (
-                "✅ Saved"
-              ) : (
-                "Save Voice"
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Personality - Tone */}
-        <div className="form-group">
-          <label htmlFor="tone">Personality Tone</label>
+          <label htmlFor="visibility">Visibility</label>
           <select
-            id="tone"
-            name="tone"
-            value={formData.personality.tone}
-            onChange={handlePersonalityChange}
+            id="visibility"
+            name="visibility"
+            value={formData.visibility}
+            onChange={handleInputChange}
             disabled={loading}
           >
-            <option value="friendly">Friendly</option>
-            <option value="professional">Professional</option>
-            <option value="enthusiastic">Enthusiastic</option>
-            <option value="supportive">Supportive</option>
-            <option value="strict">Strict</option>
-          </select>
-        </div>
-
-        {/* Personality - Formality */}
-        <div className="form-group">
-          <label htmlFor="formality">Formality Level</label>
-          <select
-            id="formality"
-            name="formality"
-            value={formData.personality.formality}
-            onChange={handlePersonalityChange}
-            disabled={loading}
-          >
-            <option value="casual">Casual</option>
-            <option value="professional">Professional</option>
-            <option value="formal">Formal</option>
+            <option value="private">
+              🔒 Private - Only you can see this agent
+            </option>
+            <option value="campus">
+              🏫 Campus - All students on your campus
+            </option>
+            <option value="public">
+              🌍 Public - Anyone can use this agent
+            </option>
           </select>
         </div>
 

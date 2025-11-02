@@ -18,19 +18,26 @@ function Creator() {
     if (storedUserData) {
       const parsedData = JSON.parse(storedUserData);
       setUserData(parsedData);
-      // Check if user has existing agents
-      checkUserAgents(parsedData.user_id);
+      // Check if user has existing agents using instructor_id (integer ID)
+      checkUserAgents(parsedData.id);
     } else {
       // If no user data, redirect to login
       navigate("/");
     }
   }, [navigate]);
 
-  const checkUserAgents = async (userId) => {
+  const checkUserAgents = async (instructorId) => {
     setCheckingAgents(true);
     try {
-      console.log("Checking agents for user_id:", userId);
-      const url = `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents?user_id=${userId}`;
+      console.log("Checking agents for instructor_id:", instructorId);
+
+      // Use the creator-specific URL if it exists, otherwise use the new unified API
+      const newApiUrl = `${process.env.REACT_APP_BASE_API_URL}/api/creator/agents?instructor_id=${instructorId}`;
+      const oldApiUrl = `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents?instructor_id=${instructorId}`;
+      const url = process.env.REACT_APP_CREATOR_BASE_API_URL
+        ? oldApiUrl
+        : newApiUrl;
+
       console.log("API URL:", url);
 
       const response = await fetch(url);
@@ -44,6 +51,7 @@ function Creator() {
       } else {
         const errorData = await response.json().catch(() => ({}));
         console.error("API Error:", errorData);
+        console.error("Response status:", response.status);
         // Default to list view if API fails
         setView("list");
       }
@@ -75,7 +83,7 @@ function Creator() {
   const handleFormSuccess = (agent) => {
     // Refresh the agents list
     if (userData) {
-      checkUserAgents(userData.user_id);
+      checkUserAgents(userData.id);
     }
     setSelectedAgent(null);
     setView("list");
@@ -153,7 +161,7 @@ function Creator() {
               </p>
             </div>
             <AgentList
-              creatorId={userData.user_id}
+              instructorId={userData.id}
               onEdit={handleEdit}
               onCreateNew={handleCreateNew}
             />
@@ -176,7 +184,7 @@ function Creator() {
               existingAgent={selectedAgent}
               onSuccess={handleFormSuccess}
               onCancel={handleFormCancel}
-              creatorId={userData.user_id}
+              instructorId={userData.id}
             />
           </>
         )}

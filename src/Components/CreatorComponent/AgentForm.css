@@ -327,6 +327,83 @@
   }
 }
 
+/* Textarea Styling */
+.agent-form textarea {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(97, 218, 251, 0.3);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  transition: all 0.3s ease;
+}
+
+.agent-form textarea:focus {
+  outline: none;
+  border-color: #61dafb;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(97, 218, 251, 0.1);
+}
+
+.agent-form textarea::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Range Input (Temperature Slider) */
+.agent-form input[type="range"] {
+  width: 100%;
+  height: 6px;
+  background: linear-gradient(to right, #61dafb 0%, #00d4ff 100%);
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.agent-form input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: #61dafb;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.agent-form input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 10px rgba(97, 218, 251, 0.5);
+}
+
+.agent-form input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: #61dafb;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.agent-form input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 10px rgba(97, 218, 251, 0.5);
+}
+
+.temperature-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .agent-form-container {
@@ -355,5 +432,9 @@
 
   .save-voice-btn {
     width: 100%;
+  }
+
+  .temperature-labels {
+    font-size: 0.75rem;
   }
 }

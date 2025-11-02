@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./AgentList.css";
 
-function AgentList({ creatorId, onEdit, onCreateNew }) {
+function AgentList({ instructorId, onEdit, onCreateNew }) {
   const navigate = useNavigate();
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,8 +14,16 @@ function AgentList({ creatorId, onEdit, onCreateNew }) {
     setError(null);
 
     try {
-      console.log("Fetching agents for user_id:", creatorId);
-      const url = `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents?user_id=${creatorId}`;
+      console.log("Fetching agents for instructor_id:", instructorId);
+
+      // Try the new API endpoint structure first, fallback to old structure if needed
+      const newApiUrl = `${process.env.REACT_APP_BASE_API_URL}/api/creator/agents?instructor_id=${instructorId}`;
+      const oldApiUrl = `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents?instructor_id=${instructorId}`;
+
+      // Use the creator-specific URL if it exists, otherwise use the new unified API
+      const url = process.env.REACT_APP_CREATOR_BASE_API_URL
+        ? oldApiUrl
+        : newApiUrl;
       console.log("API URL:", url);
 
       const response = await fetch(url);
@@ -23,6 +31,8 @@ function AgentList({ creatorId, onEdit, onCreateNew }) {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error("API Error Response:", errorData);
+        console.error("Response status:", response.status);
+        console.error("Response URL:", url);
         throw new Error(
           errorData.message || `HTTP error! status: ${response.status}`
         );
@@ -42,7 +52,7 @@ function AgentList({ creatorId, onEdit, onCreateNew }) {
   useEffect(() => {
     fetchAgents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [creatorId]);
+  }, [instructorId]);
 
   const handleDelete = async (agentId) => {
     if (!window.confirm("Are you sure you want to delete this agent?")) {
@@ -51,12 +61,16 @@ function AgentList({ creatorId, onEdit, onCreateNew }) {
 
     setDeleteLoading(agentId);
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents/${agentId}?user_id=${creatorId}`,
-        {
-          method: "DELETE",
-        }
-      );
+      // Use the same URL pattern as fetchAgents
+      const newApiUrl = `${process.env.REACT_APP_BASE_API_URL}/api/creator/agents/${agentId}?instructor_id=${instructorId}`;
+      const oldApiUrl = `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents/${agentId}?instructor_id=${instructorId}`;
+      const url = process.env.REACT_APP_CREATOR_BASE_API_URL
+        ? oldApiUrl
+        : newApiUrl;
+
+      const response = await fetch(url, {
+        method: "DELETE",
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -71,29 +85,27 @@ function AgentList({ creatorId, onEdit, onCreateNew }) {
     }
   };
 
-  const getAgentTypeIcon = (type) => {
-    switch (type) {
-      case "instructor":
-        return "👨‍🏫";
-      case "it_support":
-        return "🔧";
-      case "administration":
-        return "📋";
+  const getVisibilityIcon = (visibility) => {
+    switch (visibility) {
+      case "public":
+        return "�";
+      case "campus":
+        return "🏫";
+      case "private":
       default:
-        return "🤖";
+        return "🔒";
     }
   };
 
-  const getAgentTypeLabel = (type) => {
-    switch (type) {
-      case "instructor":
-        return "Instructor";
-      case "it_support":
-        return "IT Support";
-      case "administration":
-        return "Administration";
+  const getVisibilityLabel = (visibility) => {
+    switch (visibility) {
+      case "public":
+        return "Public";
+      case "campus":
+        return "Campus";
+      case "private":
       default:
-        return type;
+        return "Private";
     }
   };
 
@@ -160,11 +172,12 @@ function AgentList({ creatorId, onEdit, onCreateNew }) {
           <div key={agent.id} className="agent-card">
             <div className="agent-card-header">
               <div className="agent-type-badge">
-                <span className="agent-icon">
-                  {getAgentTypeIcon(agent.agent_type)}
-                </span>
+                <span className="agent-icon">🤖</span>
                 <span className="agent-type-label">
-                  {getAgentTypeLabel(agent.agent_type)}
+                  {getVisibilityLabel(agent.visibility)}
+                </span>
+                <span className="visibility-icon">
+                  {getVisibilityIcon(agent.visibility)}
                 </span>
               </div>
               <div className="agent-actions">
@@ -196,53 +209,37 @@ function AgentList({ creatorId, onEdit, onCreateNew }) {
             </div>
 
             <div className="agent-card-content">
-              <h3 className="agent-domain">{agent.domain}</h3>
+              <h3 className="agent-name">{agent.name}</h3>
+
+              {agent.description && (
+                <p className="agent-description">{agent.description}</p>
+              )}
 
               <div className="agent-details">
                 <div className="agent-detail-item">
-                  <span className="detail-icon">🏫</span>
-                  <span className="detail-text">{agent.campus}</span>
+                  <span className="detail-icon">🧠</span>
+                  <span className="detail-text">
+                    {agent.model_type || "gpt-5"}
+                  </span>
                 </div>
 
                 <div className="agent-detail-item">
-                  <span className="detail-icon">🌍</span>
-                  <span className="detail-text">{agent.region}</span>
+                  <span className="detail-icon">🌡️</span>
+                  <span className="detail-text">
+                    Temp: {agent.temperature || 0.7}
+                  </span>
                 </div>
               </div>
-
-              {agent.courses && agent.courses.length > 0 && (
-                <div className="agent-courses">
-                  <span className="courses-label">Courses:</span>
-                  <div className="course-chips">
-                    {agent.courses.slice(0, 3).map((course) => (
-                      <span key={course} className="course-chip">
-                        {course}
-                      </span>
-                    ))}
-                    {agent.courses.length > 3 && (
-                      <span className="course-chip more">
-                        +{agent.courses.length - 3}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {agent.personality && (
-                <div className="agent-personality">
-                  <span className="personality-trait">
-                    🎭 {agent.personality.tone || "friendly"}
-                  </span>
-                  <span className="personality-trait">
-                    📝 {agent.personality.formality || "professional"}
-                  </span>
-                </div>
-              )}
 
               <div className="agent-card-footer">
                 <span className="agent-date">
                   Created {formatDate(agent.created_at)}
                 </span>
+                {agent.instructor_name && (
+                  <span className="agent-instructor">
+                    by {agent.instructor_name}
+                  </span>
+                )}
               </div>
             </div>
           </div>
