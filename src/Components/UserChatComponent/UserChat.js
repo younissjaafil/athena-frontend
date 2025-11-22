@@ -18,7 +18,7 @@ function UserChat() {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  const API_BASE_URL = "https://agent-chat-alpha.vercel.app";
+  const API_BASE_URL = "https://agent.athena-ai.pro";
 
   // Premium agents that require payment
   const PREMIUM_AGENTS = {

@@ -10,7 +10,7 @@ function StudentDashboard() {
   const [error, setError] = useState(null);
   const [paidAgents, setPaidAgents] = useState([]);
 
-  const API_BASE_URL = "https://agent-chat-alpha.vercel.app";
+  const API_BASE_URL = "https://agent.athena-ai.pro";
 
   // Premium agents that require payment
   const PREMIUM_AGENTS = {
