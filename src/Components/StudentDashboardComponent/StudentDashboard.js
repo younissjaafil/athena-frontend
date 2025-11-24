@@ -10,7 +10,8 @@ function StudentDashboard() {
   const [error, setError] = useState(null);
   const [paidAgents, setPaidAgents] = useState([]);
 
-  const API_BASE_URL = "https://agent.athena-ai.pro";
+  const API_BASE_URL =
+    process.env.REACT_APP_AGENT_API_URL || "https://agent.athena-ai.pro";
 
   // Premium agents that require payment
   const PREMIUM_AGENTS = {
@@ -35,6 +36,7 @@ function StudentDashboard() {
       // If no user data, redirect to login
       navigate("/");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   const fetchAgents = async () => {

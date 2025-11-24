@@ -19,7 +19,10 @@ function UserChat() {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  const API_BASE_URL = "https://agent.athena-ai.pro";
+  const API_BASE_URL =
+    process.env.REACT_APP_AGENT_API_URL || "https://agent.athena-ai.pro";
+  const CHAT_API_URL =
+    process.env.REACT_APP_CHAT_API_URL || "https://agent-chat-alpha.vercel.app";
 
   // Premium agents that require payment
   const PREMIUM_AGENTS = {
@@ -137,7 +140,7 @@ function UserChat() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/chat`, {
+      const response = await fetch(`${CHAT_API_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
