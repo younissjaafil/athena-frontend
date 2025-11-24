@@ -9,6 +9,7 @@ function UserChat() {
 
   const [userData, setUserData] = useState(null);
   const [agent, setAgent] = useState(null);
+  const [agentInfo, setAgentInfo] = useState(null);
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -153,6 +154,11 @@ function UserChat() {
       const result = await response.json();
 
       if (result.success) {
+        // Store agent info from response if available
+        if (result.agent && !agentInfo) {
+          setAgentInfo(result.agent);
+        }
+
         const agentMessage = {
           text: result.response,
           isUser: false,
@@ -214,9 +220,10 @@ function UserChat() {
         <div className="agent-info">
           <div className="agent-avatar">🤖</div>
           <div className="agent-details">
-            <h2>{agent?.name || "AI Assistant"}</h2>
+            <h2>{agent?.name || agentInfo?.name || "AI Assistant"}</h2>
             <p className="agent-status">
-              <span className="status-dot"></span> Online
+              <span className="status-dot"></span> Online • Agent ID:{" "}
+              <code>{agentInfo?.agentId || agentId}</code>
             </p>
           </div>
         </div>
@@ -333,7 +340,12 @@ function UserChat() {
           </button>
         </div>
         <div className="input-footer">
-          <small>Powered by ATHENA AI • {agent?.model_type || "GPT-4"}</small>
+          <small>
+            🧠 Powered by ATHENA AI • {agent?.model_type || "GPT-4"} • 📚
+            Trained on instructor documents (Agent:{" "}
+            {agentInfo?.agentId?.substring(0, 8) || agentId?.substring(0, 8)}
+            ...)
+          </small>
         </div>
       </div>
     </div>

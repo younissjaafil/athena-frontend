@@ -184,15 +184,23 @@ function StudentDashboard() {
 
                       <div className="agent-metadata">
                         <div className="metadata-item">
-                          <span className="metadata-label">Agent ID:</span>
-                          <span className="metadata-value">
+                          <span className="metadata-label">📋 Agent ID:</span>
+                          <span className="metadata-value metadata-id">
                             {agent.agentId}
                           </span>
                         </div>
                         <div className="metadata-item">
-                          <span className="metadata-label">Temperature:</span>
+                          <span className="metadata-label">
+                            🌡️ Temperature:
+                          </span>
                           <span className="metadata-value">
                             {agent.temperature}
+                          </span>
+                        </div>
+                        <div className="metadata-item metadata-full-width">
+                          <span className="metadata-label">📚 Knowledge:</span>
+                          <span className="metadata-value">
+                            Trained on instructor documents
                           </span>
                         </div>
                       </div>
