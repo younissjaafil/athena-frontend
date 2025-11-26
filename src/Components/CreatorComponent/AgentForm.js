@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import "./AgentForm.css";
 
-function AgentForm({ existingAgent, onSuccess, onCancel, instructorId }) {
+function AgentForm({ existingAgent, onSuccess, onCancel, creatorId }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
@@ -45,7 +45,7 @@ function AgentForm({ existingAgent, onSuccess, onCancel, instructorId }) {
 
     try {
       const payload = {
-        instructor_id: instructorId,
+        creator_id: creatorId,
         ...formData,
         temperature: parseFloat(formData.temperature),
       };

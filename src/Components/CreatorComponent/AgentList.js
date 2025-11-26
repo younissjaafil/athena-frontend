@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./AgentList.css";
 
-function AgentList({ instructorId, onEdit, onCreateNew }) {
+function AgentList({ creatorId, onEdit, onCreateNew }) {
   const navigate = useNavigate();
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,11 +14,11 @@ function AgentList({ instructorId, onEdit, onCreateNew }) {
     setError(null);
 
     try {
-      console.log("Fetching agents for instructor_id:", instructorId);
+      console.log("Fetching agents for creator_id:", creatorId);
 
       // Try the new API endpoint structure first, fallback to old structure if needed
-      const newApiUrl = `${process.env.REACT_APP_BASE_API_URL}/api/creator/agents?instructor_id=${instructorId}`;
-      const oldApiUrl = `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents?instructor_id=${instructorId}`;
+      const newApiUrl = `${process.env.REACT_APP_BASE_API_URL}/api/creator/agents?creator_id=${creatorId}`;
+      const oldApiUrl = `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents?creator_id=${creatorId}`;
 
       // Use the creator-specific URL if it exists, otherwise use the new unified API
       const url = process.env.REACT_APP_CREATOR_BASE_API_URL
@@ -52,7 +52,7 @@ function AgentList({ instructorId, onEdit, onCreateNew }) {
   useEffect(() => {
     fetchAgents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [instructorId]);
+  }, [creatorId]);
 
   const handleDelete = async (agentId) => {
     if (!window.confirm("Are you sure you want to delete this agent?")) {
@@ -62,8 +62,8 @@ function AgentList({ instructorId, onEdit, onCreateNew }) {
     setDeleteLoading(agentId);
     try {
       // Use the same URL pattern as fetchAgents
-      const newApiUrl = `${process.env.REACT_APP_BASE_API_URL}/api/creator/agents/${agentId}?instructor_id=${instructorId}`;
-      const oldApiUrl = `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents/${agentId}?instructor_id=${instructorId}`;
+      const newApiUrl = `${process.env.REACT_APP_BASE_API_URL}/api/creator/agents/${agentId}?creator_id=${creatorId}`;
+      const oldApiUrl = `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents/${agentId}?creator_id=${creatorId}`;
       const url = process.env.REACT_APP_CREATOR_BASE_API_URL
         ? oldApiUrl
         : newApiUrl;
@@ -235,9 +235,9 @@ function AgentList({ instructorId, onEdit, onCreateNew }) {
                 <span className="agent-date">
                   Created {formatDate(agent.created_at)}
                 </span>
-                {agent.instructor_name && (
+                {agent.creator_name && (
                   <span className="agent-instructor">
-                    by {agent.instructor_name}
+                    by {agent.creator_name}
                   </span>
                 )}
               </div>

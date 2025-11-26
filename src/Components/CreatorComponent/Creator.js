@@ -18,7 +18,7 @@ function Creator() {
     if (storedUserData) {
       const parsedData = JSON.parse(storedUserData);
       setUserData(parsedData);
-      // Check if user has existing agents using instructor_id (integer ID)
+      // Check if user has existing agents using creator_id (integer ID)
       checkUserAgents(parsedData.id);
     } else {
       // If no user data, redirect to login
@@ -26,14 +26,14 @@ function Creator() {
     }
   }, [navigate]);
 
-  const checkUserAgents = async (instructorId) => {
+  const checkUserAgents = async (creatorId) => {
     setCheckingAgents(true);
     try {
-      console.log("Checking agents for instructor_id:", instructorId);
+      console.log("Checking agents for creator_id:", creatorId);
 
       // Use the creator-specific URL if it exists, otherwise use the new unified API
-      const newApiUrl = `${process.env.REACT_APP_BASE_API_URL}/api/creator/agents?instructor_id=${instructorId}`;
-      const oldApiUrl = `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents?instructor_id=${instructorId}`;
+      const newApiUrl = `${process.env.REACT_APP_BASE_API_URL}/api/creator/agents?creator_id=${creatorId}`;
+      const oldApiUrl = `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents?creator_id=${creatorId}`;
       const url = process.env.REACT_APP_CREATOR_BASE_API_URL
         ? oldApiUrl
         : newApiUrl;
@@ -161,7 +161,7 @@ function Creator() {
               </p>
             </div>
             <AgentList
-              instructorId={userData.id}
+              creatorId={userData.id}
               onEdit={handleEdit}
               onCreateNew={handleCreateNew}
             />
@@ -184,7 +184,7 @@ function Creator() {
               existingAgent={selectedAgent}
               onSuccess={handleFormSuccess}
               onCancel={handleFormCancel}
-              instructorId={userData.id}
+              creatorId={userData.id}
             />
           </>
         )}
