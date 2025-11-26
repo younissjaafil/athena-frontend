@@ -6,6 +6,8 @@ import Creator from "./Components/CreatorComponent/Creator";
 import StudentDashboard from "./Components/StudentDashboardComponent/StudentDashboard";
 import TrainAgent from "./Components/TrainAgentComponent/TrainAgent";
 import UserChat from "./Components/UserChatComponent/UserChat";
+import PaymentSuccess from "./Components/PaymentComponent/PaymentSuccess";
+import PaymentFailure from "./Components/PaymentComponent/PaymentFailure";
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
           <Route path="/creator" element={<Creator />} />
           <Route path="/train" element={<TrainAgent />} />
           <Route path="/chat" element={<UserChat />} />
+          <Route path="/payment/success" element={<PaymentSuccess />} />
+          <Route path="/payment/failure" element={<PaymentFailure />} />
         </Routes>
       </div>
     </Router>

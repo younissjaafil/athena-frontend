@@ -9,14 +9,12 @@ function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [paidAgents, setPaidAgents] = useState([]);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   const API_BASE_URL =
     process.env.REACT_APP_AGENT_API_URL || "https://agent.athena-ai.pro";
-
-  // Premium agents that require payment
-  const PREMIUM_AGENTS = {
-    1: { price: 5, name: "Computer Science Assistant" },
-  };
 
   useEffect(() => {
     // Get user data from localStorage
@@ -50,24 +48,48 @@ function StudentDashboard() {
       const result = await response.json();
       console.log("API Response:", result);
 
+      let agentsList = [];
       // API returns agents in result.data.agents array
       if (result.success && result.data && Array.isArray(result.data.agents)) {
-        console.log(
-          "Setting agents from result.data.agents:",
-          result.data.agents
-        );
-        setAgents(result.data.agents);
+        agentsList = result.data.agents;
       } else if (result.success && Array.isArray(result.data)) {
-        console.log("Setting agents from result.data:", result.data);
-        setAgents(result.data);
+        agentsList = result.data;
       } else if (Array.isArray(result)) {
-        // Fallback: in case the API returns array directly
-        console.log("Setting agents from result array:", result);
-        setAgents(result);
-      } else {
-        console.log("No agents found, setting empty array");
-        setAgents([]);
+        agentsList = result;
       }
+
+      // Fetch pricing for each agent
+      const agentsWithPricing = await Promise.all(
+        agentsList.map(async (agent) => {
+          try {
+            const pricingResponse = await fetch(
+              `${API_BASE_URL}/api/agents/${agent.agentId}/pricing`
+            );
+            if (pricingResponse.ok) {
+              const pricingResult = await pricingResponse.json();
+              if (pricingResult.success && pricingResult.data) {
+                return {
+                  ...agent,
+                  role: pricingResult.data.role || "free",
+                  priceAmount: pricingResult.data.priceAmount,
+                  priceCurrency: pricingResult.data.priceCurrency || "USD",
+                  requiresPayment: pricingResult.data.requiresPayment,
+                };
+              }
+            }
+          } catch (err) {
+            console.log(
+              `Could not fetch pricing for agent ${agent.agentId}:`,
+              err
+            );
+          }
+          // Default to free if pricing fetch fails
+          return { ...agent, role: "free", requiresPayment: false };
+        })
+      );
+
+      console.log("Agents with pricing:", agentsWithPricing);
+      setAgents(agentsWithPricing);
     } catch (err) {
       console.error("Error fetching agents:", err);
       setError(err.message);
@@ -82,29 +104,60 @@ function StudentDashboard() {
     navigate("/");
   };
 
-  const handleChatWithAgent = (agentId) => {
-    navigate(`/chat?agentId=${agentId}`);
+  const handleChatWithAgent = (agent) => {
+    // Check if agent requires payment and user hasn't paid
+    if (agent.role === "paid" && !paidAgents.includes(agent.agentId)) {
+      setSelectedAgent(agent);
+      setShowPaymentModal(true);
+      return;
+    }
+    navigate(`/chat?agentId=${agent.agentId}`);
   };
 
-  const handlePayForAgent = (agentId, agentName, price) => {
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      `Unlock ${agentName} for $${price}?\n\n(Payment integration will be added later)`
-    );
+  const handleInitiatePayment = async () => {
+    if (!selectedAgent || !userData) return;
 
-    if (confirmed) {
-      // Add agent to paid list
-      const updatedPaidAgents = [...paidAgents, agentId];
-      setPaidAgents(updatedPaidAgents);
-      localStorage.setItem("paidAgents", JSON.stringify(updatedPaidAgents));
+    setPaymentLoading(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/agents/${selectedAgent.agentId}/payment/create`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: userData.user_id,
+            successRedirectUrl: `https://athena-ai.pro/payment/success?agentId=${selectedAgent.agentId}`,
+            failureRedirectUrl: `https://athena-ai.pro/payment/failure?agentId=${selectedAgent.agentId}`,
+            successCallbackUrl: "https://athena-ai.pro/api/payment/success",
+            failureCallbackUrl: "https://athena-ai.pro/api/payment/failure",
+          }),
+        }
+      );
 
-      // Show success message
-      alert(`✅ Success! You now have access to ${agentName}`);
+      const result = await response.json();
+      console.log("Payment create response:", result);
+
+      if (result.success && result.data?.collectUrl) {
+        // Redirect to Whish payment page
+        window.location.href = result.data.collectUrl;
+      } else {
+        throw new Error(result.message || "Failed to create payment");
+      }
+    } catch (err) {
+      console.error("Payment error:", err);
+      alert(`Payment error: ${err.message}`);
+    } finally {
+      setPaymentLoading(false);
     }
   };
 
-  const isAgentLocked = (agentId) => {
-    return PREMIUM_AGENTS[agentId] && !paidAgents.includes(agentId);
+  const closePaymentModal = () => {
+    setShowPaymentModal(false);
+    setSelectedAgent(null);
+  };
+
+  const isAgentPaid = (agent) => {
+    return agent.role === "paid" && !paidAgents.includes(agent.agentId);
   };
 
   return (
@@ -162,18 +215,17 @@ function StudentDashboard() {
           ) : (
             <div className="agents-grid">
               {agents.map((agent) => {
-                const locked = isAgentLocked(agent.agentId);
-                const premiumInfo = PREMIUM_AGENTS[agent.agentId];
+                const isPaid = isAgentPaid(agent);
 
                 return (
                   <div
                     key={agent.id}
-                    className={`agent-card ${locked ? "locked-agent" : ""}`}
+                    className={`agent-card ${isPaid ? "locked-agent" : ""}`}
                   >
                     <div className="agent-card-header">
-                      <div className="agent-icon">{locked ? "🔒" : "🤖"}</div>
+                      <div className="agent-icon">{isPaid ? "🔒" : "🤖"}</div>
                       <div className="agent-badge">GPT-4</div>
-                      {locked && (
+                      {agent.role === "paid" && (
                         <div className="premium-badge">💎 Premium</div>
                       )}
                     </div>
@@ -188,7 +240,7 @@ function StudentDashboard() {
                         <div className="metadata-item">
                           <span className="metadata-label">📋 Agent ID:</span>
                           <span className="metadata-value metadata-id">
-                            {agent.agentId}
+                            {agent.agentId?.substring(0, 8)}...
                           </span>
                         </div>
                         <div className="metadata-item">
@@ -199,6 +251,15 @@ function StudentDashboard() {
                             {agent.temperature}
                           </span>
                         </div>
+                        {agent.role === "paid" && (
+                          <div className="metadata-item">
+                            <span className="metadata-label">💰 Price:</span>
+                            <span className="metadata-value price-tag">
+                              ${agent.priceAmount?.toFixed(2)}{" "}
+                              {agent.priceCurrency}
+                            </span>
+                          </div>
+                        )}
                         <div className="metadata-item metadata-full-width">
                           <span className="metadata-label">📚 Knowledge:</span>
                           <span className="metadata-value">
@@ -209,22 +270,16 @@ function StudentDashboard() {
                     </div>
 
                     <div className="agent-card-footer">
-                      {locked ? (
+                      {isPaid ? (
                         <button
-                          onClick={() =>
-                            handlePayForAgent(
-                              agent.agentId,
-                              agent.name,
-                              premiumInfo.price
-                            )
-                          }
+                          onClick={() => handleChatWithAgent(agent)}
                           className="pay-btn"
                         >
-                          💳 Unlock for ${premiumInfo.price}
+                          💳 Unlock for ${agent.priceAmount?.toFixed(2)}
                         </button>
                       ) : (
                         <button
-                          onClick={() => handleChatWithAgent(agent.agentId)}
+                          onClick={() => handleChatWithAgent(agent)}
                           className="chat-with-agent-btn"
                         >
                           💬 Chat with me
@@ -263,6 +318,55 @@ function StudentDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && selectedAgent && (
+        <div className="modal-overlay" onClick={closePaymentModal}>
+          <div className="payment-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-icon">💳</span>
+              <h2>Payment Required</h2>
+            </div>
+            <div className="modal-body">
+              <p>This AI assistant requires a one-time payment to access.</p>
+              <div className="agent-preview">
+                <div className="preview-icon">🤖</div>
+                <div className="preview-info">
+                  <h4>{selectedAgent.name}</h4>
+                  <p>{selectedAgent.description}</p>
+                </div>
+              </div>
+              <div className="price-display">
+                <span className="currency">
+                  {selectedAgent.priceCurrency || "USD"}
+                </span>
+                <span className="amount">
+                  {selectedAgent.priceAmount?.toFixed(2)}
+                </span>
+              </div>
+              <p className="payment-note">
+                You will be redirected to Whish to complete payment securely.
+              </p>
+            </div>
+            <div className="modal-actions">
+              <button
+                className="btn-secondary"
+                onClick={closePaymentModal}
+                disabled={paymentLoading}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-primary"
+                onClick={handleInitiatePayment}
+                disabled={paymentLoading}
+              >
+                {paymentLoading ? "Processing..." : "Pay Now"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
