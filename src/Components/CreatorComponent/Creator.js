@@ -18,7 +18,7 @@ function Creator() {
     if (storedUserData) {
       const parsedData = JSON.parse(storedUserData);
       setUserData(parsedData);
-      // Check if user has existing agents using creator_id (integer ID)
+      // Check if user has existing agents using creator_id (numeric id from backend)
       checkUserAgents(parsedData.id);
     } else {
       // If no user data, redirect to login
