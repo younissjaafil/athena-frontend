@@ -158,14 +158,16 @@ function TrainAgent() {
         const errorData = await response.json().catch(() => ({}));
         console.error("Upload error:", errorData);
         console.error("Tried agent identifier:", agentIdentifier);
+        console.error("Agent object:", selectedAgent);
 
         // Provide helpful error message
         let errorMessage =
           errorData.message ||
           errorData.error ||
           `Upload failed! status: ${response.status}`;
+
         if (errorMessage.includes("Agent not found")) {
-          errorMessage = `Agent not found in training system. The agent may need to be registered with the training API first. Tried identifier: ${agentIdentifier}`;
+          errorMessage = `⚠️ Backend Integration Issue: This agent (ID: ${agentIdentifier}) hasn't been registered with the training system yet. This is a known backend synchronization issue between the Creator API and Training API. Please contact the system administrator to sync agent databases.`;
         }
 
         throw new Error(errorMessage);
