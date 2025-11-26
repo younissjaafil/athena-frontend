@@ -21,7 +21,11 @@ function TrainAgent() {
     if (storedUserData) {
       const parsedData = JSON.parse(storedUserData);
       setUserData(parsedData);
-      fetchUserAgents(parsedData.id); // Use instructor_id (integer ID)
+      console.log("User data:", parsedData); // Debug log
+      // Use the same field as Creator component for consistency
+      const creatorId = parsedData.id || parsedData.user_id;
+      console.log("Using creator_id:", creatorId); // Debug log
+      fetchUserAgents(creatorId);
     } else {
       // If no user data, redirect to login
       navigate("/");
@@ -32,11 +36,11 @@ function TrainAgent() {
   const fetchUserAgents = async (instructorId) => {
     setLoading(true);
     try {
-      console.log("Fetching agents for instructor_id:", instructorId);
+      console.log("Fetching agents for creator_id:", instructorId);
 
       // Use the creator-specific URL if it exists, otherwise use the new unified API
-      const newApiUrl = `${process.env.REACT_APP_BASE_API_URL}/api/creator/agents?instructor_id=${instructorId}`;
-      const oldApiUrl = `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents?instructor_id=${instructorId}`;
+      const newApiUrl = `${process.env.REACT_APP_BASE_API_URL}/api/creator/agents?creator_id=${instructorId}`;
+      const oldApiUrl = `${process.env.REACT_APP_CREATOR_BASE_API_URL}/creator/agents?creator_id=${instructorId}`;
       const url = process.env.REACT_APP_CREATOR_BASE_API_URL
         ? oldApiUrl
         : newApiUrl;
@@ -49,6 +53,7 @@ function TrainAgent() {
         const result = await response.json();
         console.log("Agents fetched:", result);
         const fetchedAgents = result.data || [];
+        console.log("Fetched agents array:", fetchedAgents); // Debug log
         setAgents(fetchedAgents);
 
         // Auto-select agent if agentId is in URL
@@ -66,6 +71,7 @@ function TrainAgent() {
       } else {
         const errorData = await response.json().catch(() => ({}));
         console.error("API Error:", errorData);
+        console.error("Response status:", response.status);
       }
     } catch (err) {
       console.error("Failed to fetch agents:", err);
@@ -124,14 +130,18 @@ function TrainAgent() {
       const formData = new FormData();
       formData.append("file", selectedFile);
 
-      // Use agent_id (new API parameter) - supports both UUID and integer ID
-      formData.append("agent_id", selectedAgent.agent_id || selectedAgent.id);
+      // Try different identifier strategies based on what the training API might accept
+      // Priority: agent_id (UUID) > agentId > numeric id > name
+      const agentIdentifier =
+        selectedAgent.agent_id ||
+        selectedAgent.agentId ||
+        selectedAgent.id.toString();
 
-      console.log(
-        "Training agent with ID:",
-        selectedAgent.agent_id || selectedAgent.id
-      );
-      console.log("Agent details:", selectedAgent);
+      formData.append("agent_id", agentIdentifier);
+
+      console.log("Training agent with identifier:", agentIdentifier);
+      console.log("Full agent details:", selectedAgent);
+      console.log("Available agent fields:", Object.keys(selectedAgent));
 
       // Use environment variable for train API URL, fallback to production URL
       const trainApiUrl =
@@ -147,11 +157,18 @@ function TrainAgent() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error("Upload error:", errorData);
-        throw new Error(
+        console.error("Tried agent identifier:", agentIdentifier);
+
+        // Provide helpful error message
+        let errorMessage =
           errorData.message ||
-            errorData.error ||
-            `Upload failed! status: ${response.status}`
-        );
+          errorData.error ||
+          `Upload failed! status: ${response.status}`;
+        if (errorMessage.includes("Agent not found")) {
+          errorMessage = `Agent not found in training system. The agent may need to be registered with the training API first. Tried identifier: ${agentIdentifier}`;
+        }
+
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();

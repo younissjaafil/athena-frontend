@@ -63,7 +63,7 @@ function StudentDashboard() {
         agentsList.map(async (agent) => {
           try {
             const pricingResponse = await fetch(
-              `${API_BASE_URL}/api/agents/${agent.agentId}/pricing`
+              `${API_BASE_URL}/api/agents/${agent.id}/pricing`
             );
             if (pricingResponse.ok) {
               const pricingResult = await pricingResponse.json();
@@ -78,10 +78,7 @@ function StudentDashboard() {
               }
             }
           } catch (err) {
-            console.log(
-              `Could not fetch pricing for agent ${agent.agentId}:`,
-              err
-            );
+            console.log(`Could not fetch pricing for agent ${agent.id}:`, err);
           }
           // Default to free if pricing fetch fails
           return { ...agent, role: "free", requiresPayment: false };
@@ -106,12 +103,12 @@ function StudentDashboard() {
 
   const handleChatWithAgent = (agent) => {
     // Check if agent requires payment and user hasn't paid
-    if (agent.role === "paid" && !paidAgents.includes(agent.agentId)) {
+    if (agent.role === "paid" && !paidAgents.includes(agent.id)) {
       setSelectedAgent(agent);
       setShowPaymentModal(true);
       return;
     }
-    navigate(`/chat?agentId=${agent.agentId}`);
+    navigate(`/chat?agentId=${agent.id}`);
   };
 
   const handleInitiatePayment = async () => {
@@ -120,14 +117,14 @@ function StudentDashboard() {
     setPaymentLoading(true);
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/agents/${selectedAgent.agentId}/payment/create`,
+        `${API_BASE_URL}/api/agents/${selectedAgent.id}/payment/create`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             userId: userData.user_id,
-            successRedirectUrl: `https://athena-ai.pro/payment/success?agentId=${selectedAgent.agentId}`,
-            failureRedirectUrl: `https://athena-ai.pro/payment/failure?agentId=${selectedAgent.agentId}`,
+            successRedirectUrl: `https://athena-ai.pro/payment/success?agentId=${selectedAgent.id}`,
+            failureRedirectUrl: `https://athena-ai.pro/payment/failure?agentId=${selectedAgent.id}`,
             successCallbackUrl: "https://athena-ai.pro/api/payment/success",
             failureCallbackUrl: "https://athena-ai.pro/api/payment/failure",
           }),
@@ -157,7 +154,7 @@ function StudentDashboard() {
   };
 
   const isAgentPaid = (agent) => {
-    return agent.role === "paid" && !paidAgents.includes(agent.agentId);
+    return agent.role === "paid" && !paidAgents.includes(agent.id);
   };
 
   return (
@@ -240,7 +237,7 @@ function StudentDashboard() {
                         <div className="metadata-item">
                           <span className="metadata-label">📋 Agent ID:</span>
                           <span className="metadata-value metadata-id">
-                            {agent.agentId?.substring(0, 8)}...
+                            {agent.id}
                           </span>
                         </div>
                         <div className="metadata-item">

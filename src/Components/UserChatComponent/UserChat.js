@@ -86,7 +86,9 @@ function UserChat() {
 
         let selectedAgent = null;
         if (result.success && result.data && result.data.agents) {
-          selectedAgent = result.data.agents.find((a) => a.agentId === agentId);
+          selectedAgent = result.data.agents.find(
+            (a) => a.id === agentId || a.id.toString() === agentId
+          );
         }
 
         if (!selectedAgent) {
@@ -98,7 +100,7 @@ function UserChat() {
         // Check pricing
         try {
           const pricingResponse = await fetch(
-            `${API_BASE_URL}/api/agents/${agentId}/pricing`
+            `${API_BASE_URL}/api/agents/${selectedAgent.id}/pricing`
           );
           if (pricingResponse.ok) {
             const pricingResult = await pricingResponse.json();
@@ -130,7 +132,7 @@ function UserChat() {
           // Check payment status from backend
           try {
             const statusResponse = await fetch(
-              `${API_BASE_URL}/api/agents/${agentId}/payment/status?userId=${user.user_id}`
+              `${API_BASE_URL}/api/agents/${selectedAgent.id}/payment/status?userId=${user.user_id}`
             );
             if (statusResponse.ok) {
               const statusResult = await statusResponse.json();
@@ -141,7 +143,7 @@ function UserChat() {
               } else {
                 // Show payment required
                 setPaymentInfo({
-                  agentId: agentId,
+                  agentId: selectedAgent.id,
                   amount: selectedAgent.priceAmount,
                   currency: selectedAgent.priceCurrency,
                   agentName: selectedAgent.name,
@@ -155,7 +157,7 @@ function UserChat() {
             console.log("Could not check payment status:", err);
             // Show payment modal as fallback
             setPaymentInfo({
-              agentId: agentId,
+              agentId: selectedAgent.id,
               amount: selectedAgent.priceAmount,
               currency: selectedAgent.priceCurrency,
               agentName: selectedAgent.name,
